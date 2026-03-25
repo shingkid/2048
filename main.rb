@@ -3,26 +3,44 @@ require 'lipgloss'
 require 'tty-prompt'
 require_relative 'game'
 
-# Classic 2048 colour palette — foreground + background per tile value.
+# Colour palette for every tile value the game can produce.
+#
+# 2–2048:   classic warm progression (beige → orange → gold)
+# 4096+:    cool progression (purple → blue) — visually distinct from the
+#           warm range so players immediately recognise a rare achievement
+#
+# Ruby integers are arbitrary precision so there is no numeric overflow.
+# CELL_WIDTH = 7 accommodates values up to 9,999,999 (< 2^24).  The highest
+# tile ever recorded on a 4×4 board is 131,072 (2^17, 6 digits); anything
+# beyond the defined palette falls back to a high-contrast dark style.
 TILE_COLORS = {
-  nil  => { fg: "#776e65", bg: "#cdc1b4" },
-  2    => { fg: "#776e65", bg: "#eee4da" },
-  4    => { fg: "#776e65", bg: "#ede0c8" },
-  8    => { fg: "#f9f6f2", bg: "#f2b179" },
-  16   => { fg: "#f9f6f2", bg: "#f59563" },
-  32   => { fg: "#f9f6f2", bg: "#f67c5f" },
-  64   => { fg: "#f9f6f2", bg: "#f65e3b" },
-  128  => { fg: "#f9f6f2", bg: "#edcf72" },
-  256  => { fg: "#f9f6f2", bg: "#edcc61" },
-  512  => { fg: "#f9f6f2", bg: "#edc850" },
-  1024 => { fg: "#f9f6f2", bg: "#edc53f" },
-  2048 => { fg: "#f9f6f2", bg: "#edc22e" },
+  nil    => { fg: "#776e65", bg: "#cdc1b4" },
+  2      => { fg: "#776e65", bg: "#eee4da" },
+  4      => { fg: "#776e65", bg: "#ede0c8" },
+  8      => { fg: "#f9f6f2", bg: "#f2b179" },
+  16     => { fg: "#f9f6f2", bg: "#f59563" },
+  32     => { fg: "#f9f6f2", bg: "#f67c5f" },
+  64     => { fg: "#f9f6f2", bg: "#f65e3b" },
+  128    => { fg: "#f9f6f2", bg: "#edcf72" },
+  256    => { fg: "#f9f6f2", bg: "#edcc61" },
+  512    => { fg: "#f9f6f2", bg: "#edc850" },
+  1024   => { fg: "#f9f6f2", bg: "#edc53f" },
+  2048   => { fg: "#f9f6f2", bg: "#edc22e" },
+  4096   => { fg: "#f9f6f2", bg: "#7c5cbf" },
+  8192   => { fg: "#f9f6f2", bg: "#6a4aad" },
+  16384  => { fg: "#f9f6f2", bg: "#57389b" },
+  32768  => { fg: "#f9f6f2", bg: "#2980b9" },
+  65536  => { fg: "#f9f6f2", bg: "#1f6fa8" },
+  131072 => { fg: "#f9f6f2", bg: "#145e97" },
 }.freeze
+
+# Fallback style for tiles beyond the defined palette (large grids / long games).
+OVERFLOW_TILE_COLORS = { fg: "#ffffff", bg: "#1a1a1a" }.freeze
 
 class GameTUI
   include Bubbletea::Model
 
-  CELL_WIDTH  = 6   # interior character width of each tile
+  CELL_WIDTH  = 7   # interior character width — handles up to 7-digit values (< 2^24)
   CELL_HEIGHT = 3   # interior line height of each tile
 
   def initialize(game)
@@ -99,7 +117,8 @@ class GameTUI
   end
 
   def render_tile(value)
-    (@tile_styles[value] || @tile_styles[nil]).render(value ? value.to_s : "")
+    style = value ? (@tile_styles[value] || @tile_style_overflow) : @tile_styles[nil]
+    style.render(value ? value.to_s : "")
   end
 
   def footer_view
@@ -129,6 +148,12 @@ class GameTUI
       style = style.bold(true) unless val.nil?
       h[val] = style
     end
+
+    # Used for any tile value not in the palette (very large grids / long games).
+    @tile_style_overflow = base_tile
+      .bold(true)
+      .foreground(OVERFLOW_TILE_COLORS[:fg])
+      .background(OVERFLOW_TILE_COLORS[:bg])
   end
 end
 
