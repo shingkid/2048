@@ -19,20 +19,24 @@ bundle install
 ruby main.rb
 ```
 
-You will be prompted for a grid size (the standard game uses 4). If a saved game exists you will be offered the option to resume it instead.
+You will be prompted for a grid size (the standard game uses 4×4). The maximum allowed size is calculated automatically from your terminal dimensions — the game will never start a grid that doesn't fit on screen. If a saved game exists you will be offered the option to resume it instead.
 
-The board renders in the alternate screen buffer with the classic 2048 colour palette. Slide all tiles in one direction using the WASD keys:
+The board renders in the alternate screen buffer with the classic 2048 colour palette. Slide all tiles in one direction using WASD or the arrow keys:
 
 | Key | Direction |
 |-----|-----------|
-| `W` | Up        |
-| `A` | Left      |
-| `S` | Down      |
-| `D` | Right     |
+| `W` / `↑` | Up    |
+| `A` / `←` | Left  |
+| `S` / `↓` | Down  |
+| `D` / `→` | Right |
 
-When two tiles with the same number collide they merge into one tile with their combined value and your score increases accordingly. A new tile (2 or 4) is placed on the board after every valid move. The game ends when the board is full and no merges are possible.
+When two tiles with the same number collide they merge into one tile with their combined value and your score increases accordingly. A new tile (2 or 4) is placed on the board after every valid move.
 
-Press **Q** at any time to save and quit. Your board and score are written to `2048_save.json` and restored the next time you run the game.
+When you first create a **2048** tile a banner appears — you can keep playing to chase higher tiles. The board supports values well beyond 2048 with a distinct colour for each power of two up to 131,072.
+
+The game ends when the board is full and no merges are possible.
+
+Press **Q** at any time to save and quit. Your board and score are written to `2048_save.json` and restored the next time you run the game. Your all-time best score is saved separately in `2048_best.json` and shown in the header throughout play.
 
 ## Running the tests
 
@@ -43,7 +47,7 @@ ruby test_game.rb
 ```
 
 ```
-54 runs, 174 assertions, 0 failures, 0 errors, 0 skips
+61 runs, 189 assertions, 0 failures, 0 errors, 0 skips
 ```
 
 ## Project structure
