@@ -246,6 +246,26 @@ class Test2048 < Minitest::Test
     assert_equal [4, 4, nil, nil], @game.grid[0]
   end
 
+  def test_left_front_pair_merges_with_odd_triple
+    # [2, 2, 2, nil] → front pair merges first → [4, 2, nil, nil]
+    set_grid([[2, 2, 2, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal [4, 2, nil, nil], @game.grid[0]
+  end
+
+  def test_left_no_cascade_after_merge
+    # [2, 2, 4, nil] → merge produces 4, which must not then merge with next 4
+    set_grid([[2, 2, 4, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal [4, 4, nil, nil], @game.grid[0]
+  end
+
   def test_left_does_not_merge_different_values
     set_grid([[2,   4,   nil, nil],
               [nil, nil, nil, nil],
@@ -444,6 +464,15 @@ class Test2048 < Minitest::Test
     other = Game2048.new(size: 4)
     other.load_game(path)
     assert_equal 4, other.score
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_load_game_defaults_score_to_zero_for_legacy_files
+    path = "/tmp/test_2048_save_#{$$}.json"
+    File.write(path, JSON.generate({ "size" => 4, "grid" => Array.new(4) { Array.new(4) } }))
+    @game.load_game(path)
+    assert_equal 0, @game.score
   ensure
     File.delete(path) if File.exist?(path)
   end
