@@ -180,13 +180,7 @@ if __FILE__ == $0
       g.load_game
       g
     else
-      term_rows, term_cols = (IO.console&.winsize rescue nil) || [24, 80]
-      max_size = [(term_cols / GameTUI::CELL_WIDTH).floor,
-                  ((term_rows - 4) / GameTUI::CELL_HEIGHT).floor].min.clamp(2, 20)
-      size = prompt.ask("Grid size (2–#{max_size}):", default: "4", convert: :int) do |q|
-        q.in "2-#{max_size}"
-      end
-      g = Game2048.new(size: size)
+      g = Game2048.new(size: 4)
       g.place_tile
       g.place_tile
       g
