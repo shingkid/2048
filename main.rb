@@ -44,8 +44,9 @@ class GameTUI
   CELL_HEIGHT = 3   # interior line height of each tile
 
   def initialize(game)
-    @game            = game
-    @message         = nil
+    @game             = game
+    @message          = nil
+    @best_score       = Game2048.load_best
     # Don't flash the win banner for a game loaded mid-play that already has 2048.
     @win_acknowledged = game.won?
     build_styles
@@ -82,6 +83,8 @@ class GameTUI
     when "s", "down"  then apply_move(:down)
     when "d", "right" then apply_move(:right)
     when "q", "ctrl+c"
+      @best_score = [@best_score, @game.score].max
+      Game2048.save_best(@best_score)
       @game.save_game
       [self, Bubbletea.quit]
     else
@@ -96,6 +99,7 @@ class GameTUI
     @game.send(direction)
     if @game.valid_move
       @game.place_tile
+      @best_score = [@best_score, @game.score].max
       @message = nil
       File.delete(SAVE_FILE) if @game.game_over? && File.exist?(SAVE_FILE)
     else
@@ -110,7 +114,9 @@ class GameTUI
     title       = @style_title.render("2048")
     score_label = @style_score_label.render("Score: ")
     score_value = @style_score_value.render(@game.score.to_s)
-    Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value)
+    best_label  = @style_score_label.render("  Best: ")
+    best_value  = @style_score_value.render(@best_score.to_s)
+    Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value, best_label, best_value)
   end
 
   def grid_view

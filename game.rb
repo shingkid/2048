@@ -1,10 +1,22 @@
 require 'json'
 
 SAVE_FILE = "2048_save.json"
+BEST_FILE = "2048_best.json"
 
 class Game2048
   attr_reader :size, :score
   attr_accessor :grid, :valid_move
+
+  def self.load_best(path = BEST_FILE)
+    return 0 unless File.exist?(path)
+    JSON.parse(File.read(path))["best"] || 0
+  rescue JSON::ParserError
+    0
+  end
+
+  def self.save_best(score, path = BEST_FILE)
+    File.write(path, JSON.generate({ "best" => score }))
+  end
 
   def initialize(size: nil)
     return unless size

@@ -515,6 +515,28 @@ class Test2048 < Minitest::Test
     File.delete(path) if File.exist?(path)
   end
 
+  # ── best score ─────────────────────────────────────────────────────────────
+
+  def test_load_best_returns_zero_when_file_absent
+    assert_equal 0, Game2048.load_best("/tmp/nonexistent_best_#{$$}.json")
+  end
+
+  def test_load_best_returns_zero_for_corrupt_file
+    path = "/tmp/test_best_corrupt_#{$$}.json"
+    File.write(path, "not json")
+    assert_equal 0, Game2048.load_best(path)
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_best_round_trip
+    path = "/tmp/test_best_#{$$}.json"
+    Game2048.save_best(9999, path)
+    assert_equal 9999, Game2048.load_best(path)
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
   # ── display (smoke) ────────────────────────────────────────────────────────
 
   def test_display_does_not_crash_on_empty_grid
