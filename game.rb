@@ -34,7 +34,7 @@ class Game2048
 
   def up
     @size.times do |c|
-      line = @size.times.map { |r| @grid[r][c] }
+      line = Array.new(@size) { |r| @grid[r][c] }
       new_line, moved, delta = slide_line(line)
       @size.times { |r| @grid[r][c] = new_line[r] }
       @valid_move = true if moved
@@ -44,10 +44,9 @@ class Game2048
 
   def down
     @size.times do |c|
-      line = @size.times.map { |r| @grid[r][c] }.reverse
+      line = Array.new(@size) { |r| @grid[@size - 1 - r][c] }
       new_line, moved, delta = slide_line(line)
-      new_line.reverse!
-      @size.times { |r| @grid[r][c] = new_line[r] }
+      @size.times { |r| @grid[@size - 1 - r][c] = new_line[r] }
       @valid_move = true if moved
       @score += delta
     end
@@ -72,15 +71,12 @@ class Game2048
   end
 
   def place_tile
-    return if full?
+    empty = []
+    @grid.each_with_index { |row, r| row.each_with_index { |v, c| empty << [r, c] if v.nil? } }
+    return if empty.empty?
 
-    loop do
-      r, c = rand(@size), rand(@size)
-      next unless @grid[r][c].nil?
-
-      @grid[r][c] = rand < 0.3 ? 4 : 2
-      break
-    end
+    r, c = empty.sample
+    @grid[r][c] = rand < 0.3 ? 4 : 2
   end
 
   # Plain-text render kept for non-TUI use and debugging.
@@ -131,6 +127,9 @@ class Game2048
       end
     end
     new_line = merged + Array.new(line.size - merged.size)
-    [new_line, new_line != line, score_delta]
+    # moved: a merge happened (tile count dropped), or nils weren't already
+    # packed at the end (i.e. a nil appears in the first tiles.size slots)
+    moved = merged.size < tiles.size || (0...tiles.size).any? { |j| line[j].nil? }
+    [new_line, moved, score_delta]
   end
 end

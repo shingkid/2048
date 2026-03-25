@@ -28,6 +28,7 @@ class GameTUI
   def initialize(game)
     @game    = game
     @message = nil
+    build_styles
   end
 
   def init
@@ -56,10 +57,10 @@ class GameTUI
     end
 
     case key
-    when "w" then apply_move(:up)
-    when "a" then apply_move(:left)
-    when "s" then apply_move(:down)
-    when "d" then apply_move(:right)
+    when "w", "up"    then apply_move(:up)
+    when "a", "left"  then apply_move(:left)
+    when "s", "down"  then apply_move(:down)
+    when "d", "right" then apply_move(:right)
     when "q", "ctrl+c"
       @game.save_game
       [self, Bubbletea.quit]
@@ -84,57 +85,49 @@ class GameTUI
   # ── view helpers ────────────────────────────────────────────────────────────
 
   def header_view
-    title = Lipgloss::Style.new
-      .bold(true)
-      .foreground("#f9f6f2")
-      .background("#776e65")
-      .padding(0, 2)
-      .render("2048")
-
-    score_label = Lipgloss::Style.new
-      .foreground("#776e65")
-      .render("Score: ")
-
-    score_value = Lipgloss::Style.new
-      .bold(true)
-      .foreground("#f65e3b")
-      .render(@game.score.to_s)
-
+    title       = @style_title.render("2048")
+    score_label = @style_score_label.render("Score: ")
+    score_value = @style_score_value.render(@game.score.to_s)
     Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value)
   end
 
   def grid_view
     rows = @game.grid.map do |row|
-      cells = row.map { |v| render_tile(v) }
-      Lipgloss.join_horizontal(:top, *cells)
+      Lipgloss.join_horizontal(:top, *row.map { |v| render_tile(v) })
     end
     Lipgloss.join_vertical(:left, *rows)
   end
 
   def render_tile(value)
-    colors = TILE_COLORS[value] || TILE_COLORS[nil]
-    text   = value ? value.to_s : ""
-
-    Lipgloss::Style.new
-      .width(CELL_WIDTH)
-      .height(CELL_HEIGHT)
-      .align(:center, :center)
-      .bold(!value.nil?)
-      .foreground(colors[:fg])
-      .background(colors[:bg])
-      .render(text)
+    (@tile_styles[value] || @tile_styles[nil]).render(value ? value.to_s : "")
   end
 
   def footer_view
     if @game.game_over?
-      Lipgloss::Style.new
-        .bold(true)
-        .foreground("#f65e3b")
-        .render("Game over!  Press Q to exit.")
+      @style_game_over.render("Game over!  Press Q to exit.")
     else
-      hint = Lipgloss::Style.new.faint(true).render("W/A/S/D: move   Q: save & quit")
-      msg  = @message ? Lipgloss::Style.new.foreground("#f59563").render("   #{@message}") : ""
+      hint = @style_hint.render("WASD / ↑↓←→: move   Q: save & quit")
+      msg  = @message ? @style_message.render("   #{@message}") : ""
       hint + msg
+    end
+  end
+
+  # ── style cache (built once in initialize) ──────────────────────────────────
+
+  def build_styles
+    @style_title       = Lipgloss::Style.new.bold(true).foreground("#f9f6f2").background("#776e65").padding(0, 2)
+    @style_score_label = Lipgloss::Style.new.foreground("#776e65")
+    @style_score_value = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
+    @style_hint        = Lipgloss::Style.new.faint(true)
+    @style_game_over   = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
+    @style_message     = Lipgloss::Style.new.foreground("#f59563")
+
+    base_tile = Lipgloss::Style.new.width(CELL_WIDTH).height(CELL_HEIGHT).align(:center, :center)
+
+    @tile_styles = TILE_COLORS.each_with_object({}) do |(val, colors), h|
+      style = base_tile.foreground(colors[:fg]).background(colors[:bg])
+      style = style.bold(true) unless val.nil?
+      h[val] = style
     end
   end
 end
