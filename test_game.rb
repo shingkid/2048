@@ -74,26 +74,63 @@ class Test2048 < Minitest::Test
     assert @game.game_over?
   end
 
+  # ── won? ───────────────────────────────────────────────────────────────────
+
+  def test_not_won_on_empty_grid
+    refute @game.won?
+  end
+
+  def test_not_won_with_tiles_below_2048
+    set_grid([[1024, 512, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    refute @game.won?
+  end
+
+  def test_won_when_2048_tile_present
+    set_grid([[2048, nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    assert @game.won?
+  end
+
+  def test_won_when_tile_above_2048_present
+    set_grid([[4096, nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    assert @game.won?
+  end
+
+  def test_won_after_merge_produces_2048
+    set_grid([[1024, 1024, nil, nil],
+              [nil,  nil,  nil, nil],
+              [nil,  nil,  nil, nil],
+              [nil,  nil,  nil, nil]])
+    @game.left
+    assert @game.won?
+  end
+
   # ── up ─────────────────────────────────────────────────────────────────────
 
-  def test_up_shifts_tile_and_sets_valid_move
+  def test_up_shifts_tile_and_returns_true
     set_grid([[nil, nil, nil, nil],
               [2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.up
+    assert @game.up
     assert_equal 2, @game.grid[0][0]
     assert_nil       @game.grid[1][0]
-    assert           @game.valid_move
   end
 
-  def test_up_no_valid_move_when_already_packed
+  def test_up_returns_false_when_already_packed
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.up
-    refute @game.valid_move
+    refute @game.up
   end
 
   def test_up_merges_adjacent_equal_tiles
@@ -148,24 +185,22 @@ class Test2048 < Minitest::Test
 
   # ── down ───────────────────────────────────────────────────────────────────
 
-  def test_down_shifts_tile_and_sets_valid_move
+  def test_down_shifts_tile_and_returns_true
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.down
+    assert @game.down
     assert_equal 2, @game.grid[3][0]
     assert_nil       @game.grid[0][0]
-    assert           @game.valid_move
   end
 
-  def test_down_no_valid_move_when_already_packed
+  def test_down_returns_false_when_already_packed
     set_grid([[nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [2,   nil, nil, nil]])
-    @game.down
-    refute @game.valid_move
+    refute @game.down
   end
 
   def test_down_merges_adjacent_equal_tiles
@@ -200,24 +235,22 @@ class Test2048 < Minitest::Test
 
   # ── left ───────────────────────────────────────────────────────────────────
 
-  def test_left_shifts_tile_and_sets_valid_move
+  def test_left_shifts_tile_and_returns_true
     set_grid([[nil, nil, 2,   nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.left
+    assert @game.left
     assert_equal 2, @game.grid[0][0]
     assert_nil       @game.grid[0][2]
-    assert           @game.valid_move
   end
 
-  def test_left_no_valid_move_when_already_packed
+  def test_left_returns_false_when_already_packed
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.left
-    refute @game.valid_move
+    refute @game.left
   end
 
   def test_left_merges_adjacent_equal_tiles
@@ -282,24 +315,22 @@ class Test2048 < Minitest::Test
 
   # ── right ──────────────────────────────────────────────────────────────────
 
-  def test_right_shifts_tile_and_sets_valid_move
+  def test_right_shifts_tile_and_returns_true
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.right
+    assert @game.right
     assert_equal 2, @game.grid[0][3]
     assert_nil       @game.grid[0][0]
-    assert           @game.valid_move
   end
 
-  def test_right_no_valid_move_when_already_packed
+  def test_right_returns_false_when_already_packed
     set_grid([[nil, nil, nil, 2],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.right
-    refute @game.valid_move
+    refute @game.right
   end
 
   def test_right_merges_adjacent_equal_tiles
@@ -332,13 +363,11 @@ class Test2048 < Minitest::Test
     assert_equal [nil, nil, 4, 4], @game.grid[0]
   end
 
-  # ── valid_move on empty grid ────────────────────────────────────────────────
+  # ── move return values on empty grid ───────────────────────────────────────
 
-  def test_no_valid_move_on_empty_grid
+  def test_moves_return_false_on_empty_grid
     [:up, :down, :left, :right].each do |dir|
-      @game.valid_move = false
-      @game.send(dir)
-      refute @game.valid_move, "#{dir} should not register a move on an empty grid"
+      refute @game.send(dir), "#{dir} should return false on an empty grid"
     end
   end
 
@@ -472,6 +501,28 @@ class Test2048 < Minitest::Test
     File.write(path, JSON.generate({ "size" => 4, "grid" => Array.new(4) { Array.new(4) } }))
     @game.load_game(path)
     assert_equal 0, @game.score
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  # ── best score ─────────────────────────────────────────────────────────────
+
+  def test_load_best_returns_zero_when_file_absent
+    assert_equal 0, Game2048.load_best("/tmp/nonexistent_best_#{$$}.json")
+  end
+
+  def test_load_best_returns_zero_for_corrupt_file
+    path = "/tmp/test_best_corrupt_#{$$}.json"
+    File.write(path, "not json")
+    assert_equal 0, Game2048.load_best(path)
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_best_round_trip
+    path = "/tmp/test_best_#{$$}.json"
+    Game2048.save_best(9999, path)
+    assert_equal 9999, Game2048.load_best(path)
   ensure
     File.delete(path) if File.exist?(path)
   end

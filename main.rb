@@ -1,33 +1,53 @@
 require 'bubbletea'
 require 'lipgloss'
 require 'tty-prompt'
+require 'io/console'
 require_relative 'game'
 
-# Classic 2048 colour palette — foreground + background per tile value.
+# Colour palette for every tile value the game can produce.
+#
+# 2–2048:   classic warm progression (beige → orange → gold)
+# 4096+:    cool progression (purple → blue) — visually distinct from the
+#           warm range so players immediately recognise a rare achievement
+#
+# Ruby integers are arbitrary precision so there is no numeric overflow.
+# CELL_WIDTH = 7 accommodates values up to 9,999,999 (< 2^24).  The highest
+# tile ever recorded on a 4×4 board is 131,072 (2^17, 6 digits); anything
+# beyond the defined palette falls back to a high-contrast dark style.
 TILE_COLORS = {
-  nil  => { fg: "#776e65", bg: "#cdc1b4" },
-  2    => { fg: "#776e65", bg: "#eee4da" },
-  4    => { fg: "#776e65", bg: "#ede0c8" },
-  8    => { fg: "#f9f6f2", bg: "#f2b179" },
-  16   => { fg: "#f9f6f2", bg: "#f59563" },
-  32   => { fg: "#f9f6f2", bg: "#f67c5f" },
-  64   => { fg: "#f9f6f2", bg: "#f65e3b" },
-  128  => { fg: "#f9f6f2", bg: "#edcf72" },
-  256  => { fg: "#f9f6f2", bg: "#edcc61" },
-  512  => { fg: "#f9f6f2", bg: "#edc850" },
-  1024 => { fg: "#f9f6f2", bg: "#edc53f" },
-  2048 => { fg: "#f9f6f2", bg: "#edc22e" },
+  nil    => { fg: "#776e65", bg: "#cdc1b4" },
+  2      => { fg: "#776e65", bg: "#eee4da" },
+  4      => { fg: "#776e65", bg: "#ede0c8" },
+  8      => { fg: "#f9f6f2", bg: "#f2b179" },
+  16     => { fg: "#f9f6f2", bg: "#f59563" },
+  32     => { fg: "#f9f6f2", bg: "#f67c5f" },
+  64     => { fg: "#f9f6f2", bg: "#f65e3b" },
+  128    => { fg: "#f9f6f2", bg: "#edcf72" },
+  256    => { fg: "#f9f6f2", bg: "#edcc61" },
+  512    => { fg: "#f9f6f2", bg: "#edc850" },
+  1024   => { fg: "#f9f6f2", bg: "#edc53f" },
+  2048   => { fg: "#f9f6f2", bg: "#edc22e" },
+  4096   => { fg: "#f9f6f2", bg: "#7c5cbf" },
+  8192   => { fg: "#f9f6f2", bg: "#6a4aad" },
+  16384  => { fg: "#f9f6f2", bg: "#57389b" },
+  32768  => { fg: "#f9f6f2", bg: "#2980b9" },
+  65536  => { fg: "#f9f6f2", bg: "#1f6fa8" },
+  131072 => { fg: "#f9f6f2", bg: "#145e97" },
 }.freeze
+
 
 class GameTUI
   include Bubbletea::Model
 
-  CELL_WIDTH  = 6   # interior character width of each tile
+  CELL_WIDTH  = 7   # interior character width — handles up to 7-digit values (< 2^24)
   CELL_HEIGHT = 3   # interior line height of each tile
 
   def initialize(game)
-    @game    = game
-    @message = nil
+    @game             = game
+    @message          = nil
+    @best_score       = Game2048.load_best
+    # Don't flash the win banner for a game loaded mid-play that already has 2048.
+    @win_acknowledged = game.won?
     build_styles
   end
 
@@ -62,6 +82,8 @@ class GameTUI
     when "s", "down"  then apply_move(:down)
     when "d", "right" then apply_move(:right)
     when "q", "ctrl+c"
+      @best_score = [@best_score, @game.score].max
+      Game2048.save_best(@best_score)
       @game.save_game
       [self, Bubbletea.quit]
     else
@@ -70,10 +92,11 @@ class GameTUI
   end
 
   def apply_move(direction)
-    @game.valid_move = false
-    @game.send(direction)
-    if @game.valid_move
+    # Dismiss the win banner on the player's first move after seeing it.
+    @win_acknowledged = true if @game.won?
+    if @game.send(direction)
       @game.place_tile
+      @best_score = [@best_score, @game.score].max
       @message = nil
       File.delete(SAVE_FILE) if @game.game_over? && File.exist?(SAVE_FILE)
     else
@@ -88,7 +111,9 @@ class GameTUI
     title       = @style_title.render("2048")
     score_label = @style_score_label.render("Score: ")
     score_value = @style_score_value.render(@game.score.to_s)
-    Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value)
+    best_label  = @style_score_label.render("  Best: ")
+    best_value  = @style_score_value.render(@best_score.to_s)
+    Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value, best_label, best_value)
   end
 
   def grid_view
@@ -99,12 +124,15 @@ class GameTUI
   end
 
   def render_tile(value)
-    (@tile_styles[value] || @tile_styles[nil]).render(value ? value.to_s : "")
+    style = value ? (@tile_styles[value] || @tile_style_overflow) : @tile_styles[nil]
+    style.render(value ? value.to_s : "")
   end
 
   def footer_view
     if @game.game_over?
       @style_game_over.render("Game over!  Press Q to exit.")
+    elsif @game.won? && !@win_acknowledged
+      @style_win.render("You reached 2048!  Keep going — press any move key to continue.")
     else
       hint = @style_hint.render("WASD / ↑↓←→: move   Q: save & quit")
       msg  = @message ? @style_message.render("   #{@message}") : ""
@@ -120,6 +148,7 @@ class GameTUI
     @style_score_value = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
     @style_hint        = Lipgloss::Style.new.faint(true)
     @style_game_over   = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
+    @style_win         = Lipgloss::Style.new.bold(true).foreground("#edc22e")
     @style_message     = Lipgloss::Style.new.foreground("#f59563")
 
     base_tile = Lipgloss::Style.new.width(CELL_WIDTH).height(CELL_HEIGHT).align(:center, :center)
@@ -129,6 +158,9 @@ class GameTUI
       style = style.bold(true) unless val.nil?
       h[val] = style
     end
+
+    # Fallback for any tile value not in the palette (large grids / long games).
+    @tile_style_overflow = base_tile.bold(true).foreground("#ffffff").background("#1a1a1a")
   end
 end
 
@@ -148,8 +180,14 @@ if __FILE__ == $0
       g.load_game
       g
     else
-      size = prompt.ask("Grid size:", default: "4", convert: :int)
+      term_rows, term_cols = (IO.console&.winsize rescue nil) || [24, 80]
+      max_size = [(term_cols / GameTUI::CELL_WIDTH).floor,
+                  ((term_rows - 4) / GameTUI::CELL_HEIGHT).floor].min.clamp(2, 20)
+      size = prompt.ask("Grid size (2–#{max_size}):", default: "4", convert: :int) do |q|
+        q.in "2-#{max_size}"
+      end
       g = Game2048.new(size: size)
+      g.place_tile
       g.place_tile
       g
     end

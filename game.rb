@@ -1,22 +1,37 @@
 require 'json'
 
 SAVE_FILE = "2048_save.json"
+BEST_FILE = "2048_best.json"
 
 class Game2048
   attr_reader :size, :score
-  attr_accessor :grid, :valid_move
+  attr_accessor :grid
+
+  def self.load_best(path = BEST_FILE)
+    return 0 unless File.exist?(path)
+    JSON.parse(File.read(path))["best"] || 0
+  rescue JSON::ParserError
+    0
+  end
+
+  def self.save_best(score, path = BEST_FILE)
+    File.write(path, JSON.generate({ "best" => score }))
+  end
 
   def initialize(size: nil)
     return unless size
 
-    @size       = size
-    @grid       = Array.new(@size) { Array.new(@size) }
-    @valid_move = false
-    @score      = 0
+    @size  = size
+    @grid  = Array.new(@size) { Array.new(@size) }
+    @score = 0
   end
 
   def full?
     @grid.all? { |row| row.none?(&:nil?) }
+  end
+
+  def won?
+    @grid.any? { |row| row.any? { |v| v && v >= 2048 } }
   end
 
   def game_over?
@@ -32,43 +47,10 @@ class Game2048
     true
   end
 
-  def up
-    @size.times do |c|
-      line = Array.new(@size) { |r| @grid[r][c] }
-      new_line, moved, delta = slide_line(line)
-      @size.times { |r| @grid[r][c] = new_line[r] }
-      @valid_move = true if moved
-      @score += delta
-    end
-  end
-
-  def down
-    @size.times do |c|
-      line = Array.new(@size) { |r| @grid[@size - 1 - r][c] }
-      new_line, moved, delta = slide_line(line)
-      @size.times { |r| @grid[@size - 1 - r][c] = new_line[r] }
-      @valid_move = true if moved
-      @score += delta
-    end
-  end
-
-  def left
-    @size.times do |r|
-      new_line, moved, delta = slide_line(@grid[r].dup)
-      @grid[r] = new_line
-      @valid_move = true if moved
-      @score += delta
-    end
-  end
-
-  def right
-    @size.times do |r|
-      new_line, moved, delta = slide_line(@grid[r].reverse)
-      @grid[r] = new_line.reverse
-      @valid_move = true if moved
-      @score += delta
-    end
-  end
+  def up    = slide_lines { |i| (0...@size).map { |r| [r, i] } }
+  def down  = slide_lines { |i| (0...@size).map { |r| [@size - 1 - r, i] } }
+  def left  = slide_lines { |i| (0...@size).map { |c| [i, c] } }
+  def right = slide_lines { |i| (0...@size).map { |c| [i, @size - 1 - c] } }
 
   def place_tile
     empty = []
@@ -76,7 +58,7 @@ class Game2048
     return if empty.empty?
 
     r, c = empty.sample
-    @grid[r][c] = rand < 0.3 ? 4 : 2
+    @grid[r][c] = rand < 0.1 ? 4 : 2
   end
 
   # Plain-text render kept for non-TUI use and debugging.
@@ -99,14 +81,29 @@ class Game2048
   end
 
   def load_game(path = SAVE_FILE)
-    data    = JSON.parse(File.read(path))
-    @size   = data["size"]
-    @grid   = data["grid"]
-    @score  = data["score"] || 0
-    @valid_move = false
+    data   = JSON.parse(File.read(path))
+    @size  = data["size"]
+    @grid  = data["grid"]
+    @score = data["score"] || 0
   end
 
   private
+
+  # Applies slide_line across every row/column described by the block.
+  # The block receives an index 0..size-1 and returns an ordered array of
+  # [row, col] coordinates representing one line to slide toward index 0.
+  def slide_lines
+    moved = false
+    @size.times do |i|
+      coords   = yield(i)
+      line     = coords.map { |r, c| @grid[r][c] }
+      new_line, did_move, delta = slide_line(line)
+      coords.each_with_index { |(r, c), j| @grid[r][c] = new_line[j] }
+      moved = true if did_move
+      @score += delta
+    end
+    moved
+  end
 
   # Slides all non-nil values in +line+ toward index 0, merging equal
   # adjacent tiles once each. Returns [new_line, moved, score_delta].
