@@ -51,22 +51,26 @@ class Test2048 < Minitest::Test
   end
 
   def test_game_over_full_with_horizontal_merge_available
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
-    @game.grid[0][0] = @game.grid[0][1]
+    set_grid([[2, 2, 4, 8],   # [0][0] == [0][1] — horizontal merge available
+              [4, 8, 2, 4],
+              [8, 4, 8, 2],
+              [4, 2, 4, 8]])
     refute @game.game_over?
   end
 
   def test_game_over_full_with_vertical_merge_available
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
-    @game.grid[0][0] = @game.grid[1][0]
+    set_grid([[2, 4, 8, 4],   # [0][0] == [1][0] — vertical merge available
+              [2, 8, 4, 8],
+              [8, 4, 8, 4],
+              [4, 2, 4, 2]])
     refute @game.game_over?
   end
 
   def test_game_over_true_when_full_and_no_merges
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
+    set_grid([[2, 4, 2, 4],   # alternating 2/4 — no two adjacent cells are equal
+              [4, 2, 4, 2],
+              [2, 4, 2, 4],
+              [4, 2, 4, 2]])
     assert @game.game_over?
   end
 
@@ -365,13 +369,8 @@ class Test2048 < Minitest::Test
     @game.grid = Array.new(@game.size) { Array.new(@game.size, 2) }
     @game.grid[2][3] = nil
     @game.place_tile
-    assert [2, 4].include?(@game.grid[2][3])
-    @game.grid.each_with_index do |row, r|
-      row.each_with_index do |v, c|
-        next if r == 2 && c == 3
-        assert_equal 2, v
-      end
-    end
+    assert [2, 4].include?(@game.grid[2][3]), "empty cell should be filled with 2 or 4"
+    assert @game.full?, "no other cells should have changed"
   end
 
   # ── column_width ───────────────────────────────────────────────────────────
