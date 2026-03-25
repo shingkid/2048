@@ -176,6 +176,7 @@ if __FILE__ == $0
       size = prompt.ask("Grid size:", default: "4", convert: :int)
       g = Game2048.new(size: size)
       g.place_tile
+      g.place_tile
       g
     end
 
