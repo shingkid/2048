@@ -47,51 +47,10 @@ class Game2048
     true
   end
 
-  def up
-    moved = false
-    @size.times do |c|
-      line = Array.new(@size) { |r| @grid[r][c] }
-      new_line, did_move, delta = slide_line(line)
-      @size.times { |r| @grid[r][c] = new_line[r] }
-      moved = true if did_move
-      @score += delta
-    end
-    moved
-  end
-
-  def down
-    moved = false
-    @size.times do |c|
-      line = Array.new(@size) { |r| @grid[@size - 1 - r][c] }
-      new_line, did_move, delta = slide_line(line)
-      @size.times { |r| @grid[@size - 1 - r][c] = new_line[r] }
-      moved = true if did_move
-      @score += delta
-    end
-    moved
-  end
-
-  def left
-    moved = false
-    @size.times do |r|
-      new_line, did_move, delta = slide_line(@grid[r].dup)
-      @grid[r] = new_line
-      moved = true if did_move
-      @score += delta
-    end
-    moved
-  end
-
-  def right
-    moved = false
-    @size.times do |r|
-      new_line, did_move, delta = slide_line(@grid[r].reverse)
-      @grid[r] = new_line.reverse
-      moved = true if did_move
-      @score += delta
-    end
-    moved
-  end
+  def up    = slide_lines { |i| (0...@size).map { |r| [r, i] } }
+  def down  = slide_lines { |i| (0...@size).map { |r| [@size - 1 - r, i] } }
+  def left  = slide_lines { |i| (0...@size).map { |c| [i, c] } }
+  def right = slide_lines { |i| (0...@size).map { |c| [i, @size - 1 - c] } }
 
   def place_tile
     empty = []
@@ -129,6 +88,22 @@ class Game2048
   end
 
   private
+
+  # Applies slide_line across every row/column described by the block.
+  # The block receives an index 0..size-1 and returns an ordered array of
+  # [row, col] coordinates representing one line to slide toward index 0.
+  def slide_lines
+    moved = false
+    @size.times do |i|
+      coords   = yield(i)
+      line     = coords.map { |r, c| @grid[r][c] }
+      new_line, did_move, delta = slide_line(line)
+      coords.each_with_index { |(r, c), j| @grid[r][c] = new_line[j] }
+      moved = true if did_move
+      @score += delta
+    end
+    moved
+  end
 
   # Slides all non-nil values in +line+ toward index 0, merging equal
   # adjacent tiles once each. Returns [new_line, moved, score_delta].

@@ -34,8 +34,6 @@ TILE_COLORS = {
   131072 => { fg: "#f9f6f2", bg: "#145e97" },
 }.freeze
 
-# Fallback style for tiles beyond the defined palette (large grids / long games).
-OVERFLOW_TILE_COLORS = { fg: "#ffffff", bg: "#1a1a1a" }.freeze
 
 class GameTUI
   include Bubbletea::Model
@@ -160,11 +158,8 @@ class GameTUI
       h[val] = style
     end
 
-    # Used for any tile value not in the palette (very large grids / long games).
-    @tile_style_overflow = base_tile
-      .bold(true)
-      .foreground(OVERFLOW_TILE_COLORS[:fg])
-      .background(OVERFLOW_TILE_COLORS[:bg])
+    # Fallback for any tile value not in the palette (large grids / long games).
+    @tile_style_overflow = base_tile.bold(true).foreground("#ffffff").background("#1a1a1a")
   end
 end
 
