@@ -1,5 +1,5 @@
 require 'minitest/autorun'
-require_relative 'main'
+require_relative 'game'
 
 class Test2048 < Minitest::Test
   def setup
@@ -374,6 +374,36 @@ class Test2048 < Minitest::Test
     assert_equal 4, @game.column_width
   end
 
+  # ── score ──────────────────────────────────────────────────────────────────
+
+  def test_score_starts_at_zero
+    assert_equal 0, @game.score
+  end
+
+  def test_score_increases_on_merge
+    set_grid([[2, 2, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal 4, @game.score
+  end
+
+  def test_score_accumulates_across_merges
+    set_grid([[2, 2, 4, 4],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal 12, @game.score  # 4 + 8
+  end
+
+  def test_score_unaffected_by_non_merging_move
+    @game.grid[0][0] = 2
+    @game.left
+    assert_equal 0, @game.score
+  end
+
   # ── save_game / load_game ──────────────────────────────────────────────────
 
   def test_save_game_creates_file
@@ -393,8 +423,25 @@ class Test2048 < Minitest::Test
 
     other = Game2048.new(size: 4)
     other.load_game(path)
-    assert_equal @game.size, other.size
-    assert_equal @game.grid, other.grid
+    assert_equal @game.size,  other.size
+    assert_equal @game.grid,  other.grid
+    assert_equal @game.score, other.score
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_preserves_score
+    path = "/tmp/test_2048_save_#{$$}.json"
+    set_grid([[2, 2, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left   # merges → score = 4
+    @game.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal 4, other.score
   ensure
     File.delete(path) if File.exist?(path)
   end
