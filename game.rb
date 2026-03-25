@@ -76,7 +76,7 @@ class Game2048
     return if empty.empty?
 
     r, c = empty.sample
-    @grid[r][c] = rand < 0.3 ? 4 : 2
+    @grid[r][c] = rand < 0.1 ? 4 : 2
   end
 
   # Plain-text render kept for non-TUI use and debugging.
