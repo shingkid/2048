@@ -1,156 +1,165 @@
-class Game2048
-  attr_reader :size, :valid_move
-  attr_accessor :grid
+require 'bubbletea'
+require 'lipgloss'
+require 'tty-prompt'
+require_relative 'game'
 
-  def initialize(size: nil)
-    return unless size
+# Classic 2048 colour palette — foreground + background per tile value.
+TILE_COLORS = {
+  nil  => { fg: "#776e65", bg: "#cdc1b4" },
+  2    => { fg: "#776e65", bg: "#eee4da" },
+  4    => { fg: "#776e65", bg: "#ede0c8" },
+  8    => { fg: "#f9f6f2", bg: "#f2b179" },
+  16   => { fg: "#f9f6f2", bg: "#f59563" },
+  32   => { fg: "#f9f6f2", bg: "#f67c5f" },
+  64   => { fg: "#f9f6f2", bg: "#f65e3b" },
+  128  => { fg: "#f9f6f2", bg: "#edcf72" },
+  256  => { fg: "#f9f6f2", bg: "#edcc61" },
+  512  => { fg: "#f9f6f2", bg: "#edc850" },
+  1024 => { fg: "#f9f6f2", bg: "#edc53f" },
+  2048 => { fg: "#f9f6f2", bg: "#edc22e" },
+}.freeze
 
-    @size = size
-    @grid = Array.new(@size) { Array.new(@size) }
-    @valid_move = false
+class GameTUI
+  include Bubbletea::Model
+
+  CELL_WIDTH  = 6   # interior character width of each tile
+  CELL_HEIGHT = 3   # interior line height of each tile
+
+  def initialize(game)
+    @game    = game
+    @message = nil
   end
 
-  def play
-    puts "---- 2048 ----"
-    print "Enter grid length: "
-    @size = prompt_size
-    @grid = Array.new(@size) { Array.new(@size) }
-    @valid_move = false
-    place_tile
-    display
-
-    until game_over?
-      @valid_move = false
-      print "W/A/S/D? "
-      move(gets.chomp.upcase)
-      if @valid_move
-        place_tile
-      else
-        puts "Invalid move."
-      end
-      display
-    end
-
-    puts "Game over!"
+  def init
+    [self, Bubbletea.set_window_title("2048")]
   end
 
-  def full?
-    @grid.all? { |row| row.none?(&:nil?) }
-  end
-
-  def game_over?
-    @grid.each_with_index do |row, r|
-      row.each_with_index do |v, c|
-        return false if v.nil?
-        return false if r > 0 && v == @grid[r - 1][c]
-        return false if r < @size - 1 && v == @grid[r + 1][c]
-        return false if c > 0 && v == @grid[r][c - 1]
-        return false if c < @size - 1 && v == @grid[r][c + 1]
-      end
-    end
-    true
-  end
-
-  def move(input)
-    case input
-    when "W" then up
-    when "A" then left
-    when "S" then down
-    when "D" then right
-    else
-      print "Use W, A, S, or D: "
-      move(gets.chomp.upcase)
+  def update(msg)
+    case msg
+    when Bubbletea::KeyMessage then handle_key(msg.to_s)
+    else [self, nil]
     end
   end
 
-  def up
-    @size.times do |c|
-      line = @size.times.map { |r| @grid[r][c] }
-      new_line, moved = slide_line(line)
-      @size.times { |r| @grid[r][c] = new_line[r] }
-      @valid_move = true if moved
-    end
-  end
-
-  def down
-    @size.times do |c|
-      line = @size.times.map { |r| @grid[r][c] }.reverse
-      new_line, moved = slide_line(line)
-      new_line.reverse!
-      @size.times { |r| @grid[r][c] = new_line[r] }
-      @valid_move = true if moved
-    end
-  end
-
-  def left
-    @size.times do |r|
-      new_line, moved = slide_line(@grid[r].dup)
-      @grid[r] = new_line
-      @valid_move = true if moved
-    end
-  end
-
-  def right
-    @size.times do |r|
-      new_line, moved = slide_line(@grid[r].reverse)
-      @grid[r] = new_line.reverse
-      @valid_move = true if moved
-    end
-  end
-
-  def place_tile
-    return if full?
-
-    loop do
-      r, c = rand(@size), rand(@size)
-      next unless @grid[r][c].nil?
-
-      @grid[r][c] = rand < 0.3 ? 4 : 2
-      break
-    end
-  end
-
-  def display
-    width = column_width
-    separator = (" " + "-" * width) * @size
-    @grid.each do |row|
-      puts separator
-      puts "|" + row.map { |v| v.to_s.rjust(width) }.join("|") + "|"
-    end
-    puts separator
-  end
-
-  def column_width
-    @grid.flatten.compact.map { |v| v.to_s.length }.max || 1
+  def view
+    [header_view, "", grid_view, "", footer_view].join("\n")
   end
 
   private
 
-  def prompt_size
-    Integer(gets.chomp)
-  rescue ArgumentError
-    print "Please enter an integer: "
-    retry
+  # ── key handling ────────────────────────────────────────────────────────────
+
+  def handle_key(key)
+    if @game.game_over?
+      return [self, Bubbletea.quit] if key == "q" || key == "ctrl+c"
+      return [self, nil]
+    end
+
+    case key
+    when "w" then apply_move(:up)
+    when "a" then apply_move(:left)
+    when "s" then apply_move(:down)
+    when "d" then apply_move(:right)
+    when "q", "ctrl+c"
+      @game.save_game
+      [self, Bubbletea.quit]
+    else
+      [self, nil]
+    end
   end
 
-  # Slides all non-nil values in +line+ toward index 0, merging equal
-  # adjacent tiles once each. Returns [new_line, moved].
-  def slide_line(line)
-    tiles = line.compact
-    merged = []
-    i = 0
-    while i < tiles.size
-      if i + 1 < tiles.size && tiles[i] == tiles[i + 1]
-        merged << tiles[i] * 2
-        i += 2
-      else
-        merged << tiles[i]
-        i += 1
-      end
+  def apply_move(direction)
+    @game.valid_move = false
+    @game.send(direction)
+    if @game.valid_move
+      @game.place_tile
+      @message = nil
+      File.delete(SAVE_FILE) if @game.game_over? && File.exist?(SAVE_FILE)
+    else
+      @message = "No tiles moved."
     end
-    new_line = merged + Array.new(line.size - merged.size)
-    [new_line, new_line != line]
+    [self, nil]
+  end
+
+  # ── view helpers ────────────────────────────────────────────────────────────
+
+  def header_view
+    title = Lipgloss::Style.new
+      .bold(true)
+      .foreground("#f9f6f2")
+      .background("#776e65")
+      .padding(0, 2)
+      .render("2048")
+
+    score_label = Lipgloss::Style.new
+      .foreground("#776e65")
+      .render("Score: ")
+
+    score_value = Lipgloss::Style.new
+      .bold(true)
+      .foreground("#f65e3b")
+      .render(@game.score.to_s)
+
+    Lipgloss.join_horizontal(:center, title, "  ", score_label, score_value)
+  end
+
+  def grid_view
+    rows = @game.grid.map do |row|
+      cells = row.map { |v| render_tile(v) }
+      Lipgloss.join_horizontal(:top, *cells)
+    end
+    Lipgloss.join_vertical(:left, *rows)
+  end
+
+  def render_tile(value)
+    colors = TILE_COLORS[value] || TILE_COLORS[nil]
+    text   = value ? value.to_s : ""
+
+    Lipgloss::Style.new
+      .width(CELL_WIDTH)
+      .height(CELL_HEIGHT)
+      .align(:center, :center)
+      .bold(!value.nil?)
+      .foreground(colors[:fg])
+      .background(colors[:bg])
+      .render(text)
+  end
+
+  def footer_view
+    if @game.game_over?
+      Lipgloss::Style.new
+        .bold(true)
+        .foreground("#f65e3b")
+        .render("Game over!  Press Q to exit.")
+    else
+      hint = Lipgloss::Style.new.faint(true).render("W/A/S/D: move   Q: save & quit")
+      msg  = @message ? Lipgloss::Style.new.foreground("#f59563").render("   #{@message}") : ""
+      hint + msg
+    end
   end
 end
 
-Game2048.new.play if __FILE__ == $0
+# ── Entry point ──────────────────────────────────────────────────────────────
+
+if __FILE__ == $0
+  unless Bubbletea.tty?
+    puts "Error: a TTY is required to run the TUI."
+    exit 1
+  end
+
+  prompt = TTY::Prompt.new
+
+  game =
+    if File.exist?(SAVE_FILE) && prompt.yes?("Saved game found. Load it?")
+      g = Game2048.new
+      g.load_game
+      g
+    else
+      size = prompt.ask("Grid size:", default: "4", convert: :int)
+      g = Game2048.new(size: size)
+      g.place_tile
+      g
+    end
+
+  Bubbletea.run(GameTUI.new(game), alt_screen: true)
+end

@@ -1,5 +1,5 @@
 require 'minitest/autorun'
-require_relative 'main'
+require_relative 'game'
 
 class Test2048 < Minitest::Test
   def setup
@@ -372,6 +372,103 @@ class Test2048 < Minitest::Test
     @game.grid[0][0] = 8
     @game.grid[1][1] = 1024
     assert_equal 4, @game.column_width
+  end
+
+  # ── score ──────────────────────────────────────────────────────────────────
+
+  def test_score_starts_at_zero
+    assert_equal 0, @game.score
+  end
+
+  def test_score_increases_on_merge
+    set_grid([[2, 2, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal 4, @game.score
+  end
+
+  def test_score_accumulates_across_merges
+    set_grid([[2, 2, 4, 4],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal 12, @game.score  # 4 + 8
+  end
+
+  def test_score_unaffected_by_non_merging_move
+    @game.grid[0][0] = 2
+    @game.left
+    assert_equal 0, @game.score
+  end
+
+  # ── save_game / load_game ──────────────────────────────────────────────────
+
+  def test_save_game_creates_file
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 2
+    @game.save_game(path)
+    assert File.exist?(path)
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_round_trip
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 2
+    @game.grid[1][2] = 512
+    @game.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal @game.size,  other.size
+    assert_equal @game.grid,  other.grid
+    assert_equal @game.score, other.score
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_preserves_score
+    path = "/tmp/test_2048_save_#{$$}.json"
+    set_grid([[2, 2, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left   # merges → score = 4
+    @game.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal 4, other.score
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_load_game_restores_size
+    path = "/tmp/test_2048_save_#{$$}.json"
+    game3 = Game2048.new(size: 3)
+    game3.grid[0][0] = 4
+    game3.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal 3, other.size
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_preserves_nil_cells
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 8
+    @game.save_game(path)
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_nil other.grid[0][1]
+    assert_equal 8, other.grid[0][0]
+  ensure
+    File.delete(path) if File.exist?(path)
   end
 
   # ── display (smoke) ────────────────────────────────────────────────────────
