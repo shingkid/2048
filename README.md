@@ -50,6 +50,10 @@ ruby test_game.rb
 61 runs, 189 assertions, 0 failures, 0 errors, 0 skips
 ```
 
+## License
+
+[CC BY-NC 4.0](LICENSE) — free to play, share, and modify; commercial use is not permitted. Inspired by the [original 2048](https://github.com/gabrielecirulli/2048) by Gabriele Cirulli.
+
 ## Project structure
 
 ```
