@@ -19,6 +19,10 @@ class Game2048
     @grid.all? { |row| row.none?(&:nil?) }
   end
 
+  def won?
+    @grid.any? { |row| row.any? { |v| v && v >= 2048 } }
+  end
+
   def game_over?
     @grid.each_with_index do |row, r|
       row.each_with_index do |v, c|

@@ -44,8 +44,10 @@ class GameTUI
   CELL_HEIGHT = 3   # interior line height of each tile
 
   def initialize(game)
-    @game    = game
-    @message = nil
+    @game            = game
+    @message         = nil
+    # Don't flash the win banner for a game loaded mid-play that already has 2048.
+    @win_acknowledged = game.won?
     build_styles
   end
 
@@ -88,6 +90,8 @@ class GameTUI
   end
 
   def apply_move(direction)
+    # Dismiss the win banner on the player's first move after seeing it.
+    @win_acknowledged = true if @game.won?
     @game.valid_move = false
     @game.send(direction)
     if @game.valid_move
@@ -124,6 +128,8 @@ class GameTUI
   def footer_view
     if @game.game_over?
       @style_game_over.render("Game over!  Press Q to exit.")
+    elsif @game.won? && !@win_acknowledged
+      @style_win.render("You reached 2048!  Keep going — press any move key to continue.")
     else
       hint = @style_hint.render("WASD / ↑↓←→: move   Q: save & quit")
       msg  = @message ? @style_message.render("   #{@message}") : ""
@@ -139,6 +145,7 @@ class GameTUI
     @style_score_value = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
     @style_hint        = Lipgloss::Style.new.faint(true)
     @style_game_over   = Lipgloss::Style.new.bold(true).foreground("#f65e3b")
+    @style_win         = Lipgloss::Style.new.bold(true).foreground("#edc22e")
     @style_message     = Lipgloss::Style.new.foreground("#f59563")
 
     base_tile = Lipgloss::Style.new.width(CELL_WIDTH).height(CELL_HEIGHT).align(:center, :center)

@@ -74,6 +74,45 @@ class Test2048 < Minitest::Test
     assert @game.game_over?
   end
 
+  # ── won? ───────────────────────────────────────────────────────────────────
+
+  def test_not_won_on_empty_grid
+    refute @game.won?
+  end
+
+  def test_not_won_with_tiles_below_2048
+    set_grid([[1024, 512, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    refute @game.won?
+  end
+
+  def test_won_when_2048_tile_present
+    set_grid([[2048, nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    assert @game.won?
+  end
+
+  def test_won_when_tile_above_2048_present
+    set_grid([[4096, nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil],
+              [nil,  nil, nil, nil]])
+    assert @game.won?
+  end
+
+  def test_won_after_merge_produces_2048
+    set_grid([[1024, 1024, nil, nil],
+              [nil,  nil,  nil, nil],
+              [nil,  nil,  nil, nil],
+              [nil,  nil,  nil, nil]])
+    @game.left
+    assert @game.won?
+  end
+
   # ── up ─────────────────────────────────────────────────────────────────────
 
   def test_up_shifts_tile_and_sets_valid_move
