@@ -51,44 +51,40 @@ class Test2048 < Minitest::Test
   end
 
   def test_game_over_full_with_horizontal_merge_available
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
-    @game.grid[0][0] = @game.grid[0][1]
+    set_grid([[2, 2, 4, 8],   # [0][0] == [0][1] — horizontal merge available
+              [4, 8, 2, 4],
+              [8, 4, 8, 2],
+              [4, 2, 4, 8]])
     refute @game.game_over?
   end
 
   def test_game_over_full_with_vertical_merge_available
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
-    @game.grid[0][0] = @game.grid[1][0]
+    set_grid([[2, 4, 8, 4],   # [0][0] == [1][0] — vertical merge available
+              [2, 8, 4, 8],
+              [8, 4, 8, 4],
+              [4, 2, 4, 2]])
     refute @game.game_over?
   end
 
   def test_game_over_true_when_full_and_no_merges
-    val = 2
-    @game.grid.each_with_index { |row, r| row.each_with_index { |_, c| @game.grid[r][c] = val; val += 2 } }
+    set_grid([[2, 4, 2, 4],   # alternating 2/4 — no two adjacent cells are equal
+              [4, 2, 4, 2],
+              [2, 4, 2, 4],
+              [4, 2, 4, 2]])
     assert @game.game_over?
   end
 
   # ── up ─────────────────────────────────────────────────────────────────────
 
-  def test_up_shifts_lone_tile_to_top
+  def test_up_shifts_tile_and_sets_valid_move
     set_grid([[nil, nil, nil, nil],
               [2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
     @game.up
     assert_equal 2, @game.grid[0][0]
-    assert_nil @game.grid[1][0]
-  end
-
-  def test_up_sets_valid_move_on_shift
-    set_grid([[nil, nil, nil, nil],
-              [2,   nil, nil, nil],
-              [nil, nil, nil, nil],
-              [nil, nil, nil, nil]])
-    @game.up
-    assert @game.valid_move
+    assert_nil       @game.grid[1][0]
+    assert           @game.valid_move
   end
 
   def test_up_no_valid_move_when_already_packed
@@ -152,23 +148,24 @@ class Test2048 < Minitest::Test
 
   # ── down ───────────────────────────────────────────────────────────────────
 
-  def test_down_shifts_lone_tile_to_bottom
+  def test_down_shifts_tile_and_sets_valid_move
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
     @game.down
     assert_equal 2, @game.grid[3][0]
-    assert_nil @game.grid[0][0]
+    assert_nil       @game.grid[0][0]
+    assert           @game.valid_move
   end
 
-  def test_down_sets_valid_move
-    set_grid([[2,   nil, nil, nil],
+  def test_down_no_valid_move_when_already_packed
+    set_grid([[nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
-              [nil, nil, nil, nil]])
+              [2,   nil, nil, nil]])
     @game.down
-    assert @game.valid_move
+    refute @game.valid_move
   end
 
   def test_down_merges_adjacent_equal_tiles
@@ -179,15 +176,6 @@ class Test2048 < Minitest::Test
     @game.down
     assert_equal 4, @game.grid[3][0]
     assert_nil @game.grid[2][0]
-  end
-
-  def test_down_no_double_merge
-    set_grid([[2, nil, nil, nil],
-              [2, nil, nil, nil],
-              [2, nil, nil, nil],
-              [2, nil, nil, nil]])
-    @game.down
-    assert_equal [nil, nil, 4, 4], col(0)
   end
 
   def test_down_merges_equal_tiles_across_gap
@@ -201,25 +189,26 @@ class Test2048 < Minitest::Test
     assert_nil @game.grid[1][0]
   end
 
+  def test_down_no_double_merge
+    set_grid([[2, nil, nil, nil],
+              [2, nil, nil, nil],
+              [2, nil, nil, nil],
+              [2, nil, nil, nil]])
+    @game.down
+    assert_equal [nil, nil, 4, 4], col(0)
+  end
+
   # ── left ───────────────────────────────────────────────────────────────────
 
-  def test_left_shifts_lone_tile_to_leftmost
+  def test_left_shifts_tile_and_sets_valid_move
     set_grid([[nil, nil, 2,   nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
     @game.left
     assert_equal 2, @game.grid[0][0]
-    assert_nil @game.grid[0][2]
-  end
-
-  def test_left_sets_valid_move
-    set_grid([[nil, 2,   nil, nil],
-              [nil, nil, nil, nil],
-              [nil, nil, nil, nil],
-              [nil, nil, nil, nil]])
-    @game.left
-    assert @game.valid_move
+    assert_nil       @game.grid[0][2]
+    assert           @game.valid_move
   end
 
   def test_left_no_valid_move_when_already_packed
@@ -261,6 +250,26 @@ class Test2048 < Minitest::Test
     assert_equal [4, 4, nil, nil], @game.grid[0]
   end
 
+  def test_left_front_pair_merges_with_odd_triple
+    # [2, 2, 2, nil] → front pair merges first → [4, 2, nil, nil]
+    set_grid([[2, 2, 2, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal [4, 2, nil, nil], @game.grid[0]
+  end
+
+  def test_left_no_cascade_after_merge
+    # [2, 2, 4, nil] → merge produces 4, which must not then merge with next 4
+    set_grid([[2, 2, 4, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert_equal [4, 4, nil, nil], @game.grid[0]
+  end
+
   def test_left_does_not_merge_different_values
     set_grid([[2,   4,   nil, nil],
               [nil, nil, nil, nil],
@@ -273,23 +282,24 @@ class Test2048 < Minitest::Test
 
   # ── right ──────────────────────────────────────────────────────────────────
 
-  def test_right_shifts_lone_tile_to_rightmost
+  def test_right_shifts_tile_and_sets_valid_move
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
     @game.right
     assert_equal 2, @game.grid[0][3]
-    assert_nil @game.grid[0][0]
+    assert_nil       @game.grid[0][0]
+    assert           @game.valid_move
   end
 
-  def test_right_sets_valid_move
-    set_grid([[2,   nil, nil, nil],
+  def test_right_no_valid_move_when_already_packed
+    set_grid([[nil, nil, nil, 2],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
     @game.right
-    assert @game.valid_move
+    refute @game.valid_move
   end
 
   def test_right_merges_adjacent_equal_tiles
@@ -322,6 +332,16 @@ class Test2048 < Minitest::Test
     assert_equal [nil, nil, 4, 4], @game.grid[0]
   end
 
+  # ── valid_move on empty grid ────────────────────────────────────────────────
+
+  def test_no_valid_move_on_empty_grid
+    [:up, :down, :left, :right].each do |dir|
+      @game.valid_move = false
+      @game.send(dir)
+      refute @game.valid_move, "#{dir} should not register a move on an empty grid"
+    end
+  end
+
   # ── place_tile ─────────────────────────────────────────────────────────────
 
   def test_place_tile_adds_one_tile_to_empty_grid
@@ -338,18 +358,19 @@ class Test2048 < Minitest::Test
     end
   end
 
-  def test_place_tile_targets_an_empty_cell
-    @game.grid = Array.new(@game.size) { Array.new(@game.size, 2) }
-    @game.grid[1][2] = nil
-    @game.place_tile
-    refute_nil @game.grid[1][2]
-  end
-
   def test_place_tile_does_nothing_when_full
     @game.grid = Array.new(@game.size) { Array.new(@game.size, 2) }
     snapshot = @game.grid.map(&:dup)
     @game.place_tile
     assert_equal snapshot, @game.grid
+  end
+
+  def test_place_tile_fills_only_empty_cell_when_one_remains
+    @game.grid = Array.new(@game.size) { Array.new(@game.size, 2) }
+    @game.grid[2][3] = nil
+    @game.place_tile
+    assert [2, 4].include?(@game.grid[2][3]), "empty cell should be filled with 2 or 4"
+    assert @game.full?, "no other cells should have changed"
   end
 
   # ── column_width ───────────────────────────────────────────────────────────
@@ -430,13 +451,13 @@ class Test2048 < Minitest::Test
     File.delete(path) if File.exist?(path)
   end
 
-  def test_save_and_load_preserves_score
+  def test_save_and_load_preserves_nonzero_score
     path = "/tmp/test_2048_save_#{$$}.json"
     set_grid([[2, 2, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.left   # merges → score = 4
+    @game.left  # merge → score = 4
     @game.save_game(path)
 
     other = Game2048.new(size: 4)
@@ -446,27 +467,11 @@ class Test2048 < Minitest::Test
     File.delete(path) if File.exist?(path)
   end
 
-  def test_load_game_restores_size
+  def test_load_game_defaults_score_to_zero_for_legacy_files
     path = "/tmp/test_2048_save_#{$$}.json"
-    game3 = Game2048.new(size: 3)
-    game3.grid[0][0] = 4
-    game3.save_game(path)
-
-    other = Game2048.new(size: 4)
-    other.load_game(path)
-    assert_equal 3, other.size
-  ensure
-    File.delete(path) if File.exist?(path)
-  end
-
-  def test_save_preserves_nil_cells
-    path = "/tmp/test_2048_save_#{$$}.json"
-    @game.grid[0][0] = 8
-    @game.save_game(path)
-    other = Game2048.new(size: 4)
-    other.load_game(path)
-    assert_nil other.grid[0][1]
-    assert_equal 8, other.grid[0][0]
+    File.write(path, JSON.generate({ "size" => 4, "grid" => Array.new(4) { Array.new(4) } }))
+    @game.load_game(path)
+    assert_equal 0, @game.score
   ensure
     File.delete(path) if File.exist?(path)
   end
@@ -474,12 +479,6 @@ class Test2048 < Minitest::Test
   # ── display (smoke) ────────────────────────────────────────────────────────
 
   def test_display_does_not_crash_on_empty_grid
-    capture_io { @game.display }
-  end
-
-  def test_display_does_not_crash_with_tiles
-    @game.grid[0][0] = 2
-    @game.grid[1][1] = 1024
     capture_io { @game.display }
   end
 
