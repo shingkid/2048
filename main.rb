@@ -95,9 +95,7 @@ class GameTUI
   def apply_move(direction)
     # Dismiss the win banner on the player's first move after seeing it.
     @win_acknowledged = true if @game.won?
-    @game.valid_move = false
-    @game.send(direction)
-    if @game.valid_move
+    if @game.send(direction)
       @game.place_tile
       @best_score = [@best_score, @game.score].max
       @message = nil

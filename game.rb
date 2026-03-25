@@ -5,7 +5,7 @@ BEST_FILE = "2048_best.json"
 
 class Game2048
   attr_reader :size, :score
-  attr_accessor :grid, :valid_move
+  attr_accessor :grid
 
   def self.load_best(path = BEST_FILE)
     return 0 unless File.exist?(path)
@@ -21,10 +21,9 @@ class Game2048
   def initialize(size: nil)
     return unless size
 
-    @size       = size
-    @grid       = Array.new(@size) { Array.new(@size) }
-    @valid_move = false
-    @score      = 0
+    @size  = size
+    @grid  = Array.new(@size) { Array.new(@size) }
+    @score = 0
   end
 
   def full?
@@ -49,41 +48,49 @@ class Game2048
   end
 
   def up
+    moved = false
     @size.times do |c|
       line = Array.new(@size) { |r| @grid[r][c] }
-      new_line, moved, delta = slide_line(line)
+      new_line, did_move, delta = slide_line(line)
       @size.times { |r| @grid[r][c] = new_line[r] }
-      @valid_move = true if moved
+      moved = true if did_move
       @score += delta
     end
+    moved
   end
 
   def down
+    moved = false
     @size.times do |c|
       line = Array.new(@size) { |r| @grid[@size - 1 - r][c] }
-      new_line, moved, delta = slide_line(line)
+      new_line, did_move, delta = slide_line(line)
       @size.times { |r| @grid[@size - 1 - r][c] = new_line[r] }
-      @valid_move = true if moved
+      moved = true if did_move
       @score += delta
     end
+    moved
   end
 
   def left
+    moved = false
     @size.times do |r|
-      new_line, moved, delta = slide_line(@grid[r].dup)
+      new_line, did_move, delta = slide_line(@grid[r].dup)
       @grid[r] = new_line
-      @valid_move = true if moved
+      moved = true if did_move
       @score += delta
     end
+    moved
   end
 
   def right
+    moved = false
     @size.times do |r|
-      new_line, moved, delta = slide_line(@grid[r].reverse)
+      new_line, did_move, delta = slide_line(@grid[r].reverse)
       @grid[r] = new_line.reverse
-      @valid_move = true if moved
+      moved = true if did_move
       @score += delta
     end
+    moved
   end
 
   def place_tile
@@ -115,11 +122,10 @@ class Game2048
   end
 
   def load_game(path = SAVE_FILE)
-    data    = JSON.parse(File.read(path))
-    @size   = data["size"]
-    @grid   = data["grid"]
-    @score  = data["score"] || 0
-    @valid_move = false
+    data   = JSON.parse(File.read(path))
+    @size  = data["size"]
+    @grid  = data["grid"]
+    @score = data["score"] || 0
   end
 
   private

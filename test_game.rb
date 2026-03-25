@@ -115,24 +115,22 @@ class Test2048 < Minitest::Test
 
   # ── up ─────────────────────────────────────────────────────────────────────
 
-  def test_up_shifts_tile_and_sets_valid_move
+  def test_up_shifts_tile_and_returns_true
     set_grid([[nil, nil, nil, nil],
               [2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.up
+    assert @game.up
     assert_equal 2, @game.grid[0][0]
     assert_nil       @game.grid[1][0]
-    assert           @game.valid_move
   end
 
-  def test_up_no_valid_move_when_already_packed
+  def test_up_returns_false_when_already_packed
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.up
-    refute @game.valid_move
+    refute @game.up
   end
 
   def test_up_merges_adjacent_equal_tiles
@@ -187,24 +185,22 @@ class Test2048 < Minitest::Test
 
   # ── down ───────────────────────────────────────────────────────────────────
 
-  def test_down_shifts_tile_and_sets_valid_move
+  def test_down_shifts_tile_and_returns_true
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.down
+    assert @game.down
     assert_equal 2, @game.grid[3][0]
     assert_nil       @game.grid[0][0]
-    assert           @game.valid_move
   end
 
-  def test_down_no_valid_move_when_already_packed
+  def test_down_returns_false_when_already_packed
     set_grid([[nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [2,   nil, nil, nil]])
-    @game.down
-    refute @game.valid_move
+    refute @game.down
   end
 
   def test_down_merges_adjacent_equal_tiles
@@ -239,24 +235,22 @@ class Test2048 < Minitest::Test
 
   # ── left ───────────────────────────────────────────────────────────────────
 
-  def test_left_shifts_tile_and_sets_valid_move
+  def test_left_shifts_tile_and_returns_true
     set_grid([[nil, nil, 2,   nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.left
+    assert @game.left
     assert_equal 2, @game.grid[0][0]
     assert_nil       @game.grid[0][2]
-    assert           @game.valid_move
   end
 
-  def test_left_no_valid_move_when_already_packed
+  def test_left_returns_false_when_already_packed
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.left
-    refute @game.valid_move
+    refute @game.left
   end
 
   def test_left_merges_adjacent_equal_tiles
@@ -321,24 +315,22 @@ class Test2048 < Minitest::Test
 
   # ── right ──────────────────────────────────────────────────────────────────
 
-  def test_right_shifts_tile_and_sets_valid_move
+  def test_right_shifts_tile_and_returns_true
     set_grid([[2,   nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.right
+    assert @game.right
     assert_equal 2, @game.grid[0][3]
     assert_nil       @game.grid[0][0]
-    assert           @game.valid_move
   end
 
-  def test_right_no_valid_move_when_already_packed
+  def test_right_returns_false_when_already_packed
     set_grid([[nil, nil, nil, 2],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil],
               [nil, nil, nil, nil]])
-    @game.right
-    refute @game.valid_move
+    refute @game.right
   end
 
   def test_right_merges_adjacent_equal_tiles
@@ -371,13 +363,11 @@ class Test2048 < Minitest::Test
     assert_equal [nil, nil, 4, 4], @game.grid[0]
   end
 
-  # ── valid_move on empty grid ────────────────────────────────────────────────
+  # ── move return values on empty grid ───────────────────────────────────────
 
-  def test_no_valid_move_on_empty_grid
+  def test_moves_return_false_on_empty_grid
     [:up, :down, :left, :right].each do |dir|
-      @game.valid_move = false
-      @game.send(dir)
-      refute @game.valid_move, "#{dir} should not register a move on an empty grid"
+      refute @game.send(dir), "#{dir} should return false on an empty grid"
     end
   end
 
