@@ -1,3 +1,7 @@
+require 'json'
+
+SAVE_FILE = "2048_save.json"
+
 class Game2048
   attr_reader :size, :valid_move
   attr_accessor :grid
@@ -12,17 +16,30 @@ class Game2048
 
   def play
     puts "---- 2048 ----"
-    print "Enter grid length: "
-    @size = prompt_size
-    @grid = Array.new(@size) { Array.new(@size) }
-    @valid_move = false
-    place_tile
+
+    if File.exist?(SAVE_FILE)
+      print "Saved game found. Load it? (Y/N): "
+      if gets.chomp.upcase == "Y"
+        load_game
+      else
+        start_new_game
+      end
+    else
+      start_new_game
+    end
+
     display
 
     until game_over?
       @valid_move = false
-      print "W/A/S/D? "
-      move(gets.chomp.upcase)
+      print "W/A/S/D (or Q to save and quit)? "
+      input = gets.chomp.upcase
+      if input == "Q"
+        save_game
+        puts "Game saved to #{SAVE_FILE}. Goodbye!"
+        return
+      end
+      move(input)
       if @valid_move
         place_tile
       else
@@ -32,6 +49,18 @@ class Game2048
     end
 
     puts "Game over!"
+    File.delete(SAVE_FILE) if File.exist?(SAVE_FILE)
+  end
+
+  def save_game(path = SAVE_FILE)
+    File.write(path, JSON.generate({ "size" => @size, "grid" => @grid }))
+  end
+
+  def load_game(path = SAVE_FILE)
+    data = JSON.parse(File.read(path))
+    @size = data["size"]
+    @grid = data["grid"]
+    @valid_move = false
   end
 
   def full?
@@ -125,6 +154,14 @@ class Game2048
   end
 
   private
+
+  def start_new_game
+    print "Enter grid length: "
+    @size = prompt_size
+    @grid = Array.new(@size) { Array.new(@size) }
+    @valid_move = false
+    place_tile
+  end
 
   def prompt_size
     Integer(gets.chomp)

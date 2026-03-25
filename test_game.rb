@@ -374,6 +374,56 @@ class Test2048 < Minitest::Test
     assert_equal 4, @game.column_width
   end
 
+  # ── save_game / load_game ──────────────────────────────────────────────────
+
+  def test_save_game_creates_file
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 2
+    @game.save_game(path)
+    assert File.exist?(path)
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_and_load_round_trip
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 2
+    @game.grid[1][2] = 512
+    @game.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal @game.size, other.size
+    assert_equal @game.grid, other.grid
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_load_game_restores_size
+    path = "/tmp/test_2048_save_#{$$}.json"
+    game3 = Game2048.new(size: 3)
+    game3.grid[0][0] = 4
+    game3.save_game(path)
+
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_equal 3, other.size
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
+  def test_save_preserves_nil_cells
+    path = "/tmp/test_2048_save_#{$$}.json"
+    @game.grid[0][0] = 8
+    @game.save_game(path)
+    other = Game2048.new(size: 4)
+    other.load_game(path)
+    assert_nil other.grid[0][1]
+    assert_equal 8, other.grid[0][0]
+  ensure
+    File.delete(path) if File.exist?(path)
+  end
+
   # ── display (smoke) ────────────────────────────────────────────────────────
 
   def test_display_does_not_crash_on_empty_grid
