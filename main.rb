@@ -191,7 +191,7 @@ def display
     for i in 0...$l
         for j in 0...$l
             print " "
-            for k in 0...req_space
+            for _ in 0...req_space
                 print "-"
             end
         end
@@ -201,12 +201,12 @@ def display
             v = $grid[i][j]
             if v == nil
                 v = ""
-                for k in 0...req_space
+                for _ in 0...req_space
                     v += " "
                 end
             end
             v = v.to_s
-            for k in 0...(req_space-v.length)
+            for _ in 0...(req_space-v.length)
                 print " "
             end
             print v.to_s + "|"
@@ -215,7 +215,7 @@ def display
     end
     for j in 0...$l
         print " "
-        for k in 0...req_space
+        for _ in 0...req_space
             print "-"
         end
     end
