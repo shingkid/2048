@@ -190,6 +190,15 @@ class Test2048 < Minitest::Test
     assert_equal [nil, nil, 4, 4], col(0)
   end
 
+  def test_down_no_valid_move_when_already_packed
+    set_grid([[nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [2,   nil, nil, nil]])
+    @game.down
+    refute @game.valid_move
+  end
+
   def test_down_merges_equal_tiles_across_gap
     set_grid([[nil, nil, nil, nil],
               [2,   nil, nil, nil],
@@ -292,6 +301,15 @@ class Test2048 < Minitest::Test
     assert @game.valid_move
   end
 
+  def test_right_no_valid_move_when_already_packed
+    set_grid([[nil, nil, nil, 2],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.right
+    refute @game.valid_move
+  end
+
   def test_right_merges_adjacent_equal_tiles
     set_grid([[nil, nil, 2, 2],
               [nil, nil, nil, nil],
@@ -372,6 +390,78 @@ class Test2048 < Minitest::Test
     @game.grid[0][0] = 8
     @game.grid[1][1] = 1024
     assert_equal 4, @game.column_width
+  end
+
+  # ── slide_line movement detection (via public move methods) ────────────────
+  # These pin the inline moved-flag logic introduced in the optimisation:
+  # a shift-only move (no merge) must still register as valid.
+
+  def test_shift_only_registers_as_valid_move_left
+    set_grid([[nil, 2,   nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.left
+    assert @game.valid_move
+    assert_equal 2, @game.grid[0][0]
+  end
+
+  def test_shift_only_registers_as_valid_move_right
+    set_grid([[nil, nil, 2,   nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.right
+    assert @game.valid_move
+    assert_equal 2, @game.grid[0][3]
+  end
+
+  def test_shift_only_registers_as_valid_move_up
+    set_grid([[nil, nil, nil, nil],
+              [nil, nil, nil, nil],
+              [2,   nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.up
+    assert @game.valid_move
+    assert_equal 2, @game.grid[0][0]
+  end
+
+  def test_shift_only_registers_as_valid_move_down
+    set_grid([[nil, nil, nil, nil],
+              [2,   nil, nil, nil],
+              [nil, nil, nil, nil],
+              [nil, nil, nil, nil]])
+    @game.down
+    assert @game.valid_move
+    assert_equal 2, @game.grid[3][0]
+  end
+
+  def test_all_nil_line_never_valid_move
+    # Empty grid — no direction should count as a valid move
+    @game.up
+    refute @game.valid_move
+    @game.down
+    refute @game.valid_move
+    @game.left
+    refute @game.valid_move
+    @game.right
+    refute @game.valid_move
+  end
+
+  # ── place_tile (guaranteed empty-cell sampling) ─────────────────────────────
+
+  def test_place_tile_fills_only_empty_cell_when_one_remains
+    @game.grid = Array.new(@game.size) { Array.new(@game.size, 2) }
+    @game.grid[2][3] = nil
+    @game.place_tile
+    assert_equal 2, @game.grid[2][3] == 2 || @game.grid[2][3] == 4 ? @game.grid[2][3] : nil
+    # every other cell still holds 2
+    @game.grid.each_with_index do |row, r|
+      row.each_with_index do |v, c|
+        next if r == 2 && c == 3
+        assert_equal 2, v
+      end
+    end
   end
 
   # ── score ──────────────────────────────────────────────────────────────────
