@@ -19,7 +19,7 @@ bundle install
 ruby main.rb
 ```
 
-You will be prompted for a grid size (the standard game uses 4×4). The maximum allowed size is calculated automatically from your terminal dimensions — the game will never start a grid that doesn't fit on screen. If a saved game exists you will be offered the option to resume it instead.
+The game is played on the standard 4×4 board. If a saved game exists you will be offered the option to resume it instead.
 
 The board renders in the alternate screen buffer with the classic 2048 colour palette. Slide all tiles in one direction using WASD or the arrow keys:
 
