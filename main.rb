@@ -1,272 +1,156 @@
-def play
+class Game2048
+  attr_reader :size, :valid_move
+  attr_accessor :grid
+
+  def initialize(size: nil)
+    return unless size
+
+    @size = size
+    @grid = Array.new(@size) { Array.new(@size) }
+    @valid_move = false
+  end
+
+  def play
     puts "---- 2048 ----"
     print "Enter grid length: "
-    begin
-        $l = Integer(gets.chomp)
-    rescue
-        print "Please enter an integer number: "
-        retry
-    end
+    @size = prompt_size
+    @grid = Array.new(@size) { Array.new(@size) }
+    @valid_move = false
+    place_tile
+    display
 
-    $grid = Array.new($l) { Array.new($l) }
-    new_block()
-    display()
-
-    while !game_over?()
-        $valid_move = false
-        print "Up, Down, Right or Left? "
-        input = gets.chomp
-        move(input.upcase)
-        if $valid_move
-            new_block()
-        else
-            puts "Invalid move."
-        end
-        display()
+    until game_over?
+      @valid_move = false
+      print "W/A/S/D? "
+      move(gets.chomp.upcase)
+      if @valid_move
+        place_tile
+      else
+        puts "Invalid move."
+      end
+      display
     end
 
     puts "Game over!"
-end
+  end
 
-def full?
-    $grid.each {|x| x.each {|y| return false if y == nil}}
-    return true
-end
+  def full?
+    @grid.all? { |row| row.none?(&:nil?) }
+  end
 
-def move(input)
+  def game_over?
+    @grid.each_with_index do |row, r|
+      row.each_with_index do |v, c|
+        return false if v.nil?
+        return false if r > 0 && v == @grid[r - 1][c]
+        return false if r < @size - 1 && v == @grid[r + 1][c]
+        return false if c > 0 && v == @grid[r][c - 1]
+        return false if c < @size - 1 && v == @grid[r][c + 1]
+      end
+    end
+    true
+  end
+
+  def move(input)
     case input
-    when "W"
-        up()
-    when "A"
-        left()
-    when "S"
-        down()
-    when "D"
-        right()
-    when Integer
-        print "You entered a number. Choose a direction (W,A,S,D): "
-        input = gets.chomp
-        move(input.upcase)
-    when String
-        print "Use W, A, S, or D: "
-        input = gets.chomp
-        move(input.upcase)
-    end
-end
-
-def up
-    merged = Array.new($l) { Array.new($l, false) }
-    for r in 1...$l
-        for c in 0...$l
-            if $grid[r][c] != nil
-                new_r = -1
-                for i in 1..r
-                    if $grid[r-i][c] == nil
-                        new_r = r - i
-                    else
-                        break
-                    end
-                end
-                if new_r != -1
-                    $grid[new_r][c] = $grid[r][c]
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    if new_r > 0 && !merged[new_r-1][c] && $grid[new_r-1][c] == $grid[new_r][c]
-                        $grid[new_r-1][c] *= 2
-                        $grid[new_r][c] = nil
-                        merged[new_r-1][c] = true
-                    end
-                elsif r > 0 && !merged[r-1][c] && $grid[r-1][c] == $grid[r][c]
-                    $grid[r-1][c] *= 2
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    merged[r-1][c] = true
-                end
-            end
-        end
-    end
-end
-
-def down
-    merged = Array.new($l) { Array.new($l, false) }
-    for r in ($l-2).downto(0)
-        for c in 0...$l
-            if $grid[r][c] != nil
-                new_r = -1
-                for i in 1...($l-r)
-                    if $grid[r+i][c] == nil
-                        new_r = r + i
-                    else
-                        break
-                    end
-                end
-                if new_r != -1
-                    $grid[new_r][c] = $grid[r][c]
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    if new_r < $l - 1 && !merged[new_r+1][c] && $grid[new_r+1][c] == $grid[new_r][c]
-                        $grid[new_r+1][c] *= 2
-                        $grid[new_r][c] = nil
-                        merged[new_r+1][c] = true
-                    end
-                elsif r < $l - 1 && !merged[r+1][c] && $grid[r+1][c] == $grid[r][c]
-                    $grid[r+1][c] *= 2
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    merged[r+1][c] = true
-                end
-            end
-        end
-    end
-end
-
-def right
-    merged = Array.new($l) { Array.new($l, false) }
-    for r in 0...$l
-        for c in ($l-2).downto(0)
-            if $grid[r][c] != nil
-                new_c = -1
-                for i in 1...($l-c)
-                    if $grid[r][c+i] == nil
-                        new_c = c + i
-                    else
-                        break
-                    end
-                end
-                if new_c != -1
-                    $grid[r][new_c] = $grid[r][c]
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    if new_c < $l - 1 && !merged[r][new_c+1] && $grid[r][new_c+1] == $grid[r][new_c]
-                        $grid[r][new_c+1] *= 2
-                        $grid[r][new_c] = nil
-                        merged[r][new_c+1] = true
-                    end
-                elsif c < $l - 1 && !merged[r][c+1] && $grid[r][c+1] == $grid[r][c]
-                    $grid[r][c+1] *= 2
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    merged[r][c+1] = true
-                end
-            end
-        end
-    end
-end
-
-def left
-    merged = Array.new($l) { Array.new($l, false) }
-    for r in 0...$l
-        for c in 1...$l
-            if $grid[r][c] != nil
-                new_c = -1
-                for i in 1..c
-                    if $grid[r][c-i] == nil
-                        new_c = c - i
-                    else
-                        break
-                    end
-                end
-                if new_c != -1
-                    $grid[r][new_c] = $grid[r][c]
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    if new_c > 0 && !merged[r][new_c-1] && $grid[r][new_c-1] == $grid[r][new_c]
-                        $grid[r][new_c-1] *= 2
-                        $grid[r][new_c] = nil
-                        merged[r][new_c-1] = true
-                    end
-                elsif c > 0 && !merged[r][c-1] && $grid[r][c-1] == $grid[r][c]
-                    $grid[r][c-1] *= 2
-                    $grid[r][c] = nil
-                    $valid_move = true
-                    merged[r][c-1] = true
-                end
-            end
-        end
-    end
-end
-
-def display
-    req_space = calculate_spaces()
-    for i in 0...$l
-        for j in 0...$l
-            print " "
-            for _ in 0...req_space
-                print "-"
-            end
-        end
-        puts
-        print "|"
-        for j in 0...$l
-            v = $grid[i][j]
-            if v == nil
-                v = ""
-                for _ in 0...req_space
-                    v += " "
-                end
-            end
-            v = v.to_s
-            for _ in 0...(req_space-v.length)
-                print " "
-            end
-            print v.to_s + "|"
-        end
-        puts
-    end
-    for j in 0...$l
-        print " "
-        for _ in 0...req_space
-            print "-"
-        end
-    end
-    puts
-end
-
-def calculate_spaces
-    max = 1
-    for r in 0...$l
-        for c in 0...$l
-            len = $grid[r][c].to_s.length
-            if len > max
-                max = len
-            end
-        end
-    end
-    return max
-end
-
-def new_block
-    return if full?()
-    rand_r = nil
-    rand_c = nil
-    loop do
-        rand_r = rand($l)
-        rand_c = rand($l)
-        break if $grid[rand_r][rand_c] == nil
-    end
-    if rand() > 0.7
-        $grid[rand_r][rand_c] = 4
+    when "W" then up
+    when "A" then left
+    when "S" then down
+    when "D" then right
     else
-        $grid[rand_r][rand_c] = 2
+      print "Use W, A, S, or D: "
+      move(gets.chomp.upcase)
     end
+  end
+
+  def up
+    @size.times do |c|
+      line = @size.times.map { |r| @grid[r][c] }
+      new_line, moved = slide_line(line)
+      @size.times { |r| @grid[r][c] = new_line[r] }
+      @valid_move = true if moved
+    end
+  end
+
+  def down
+    @size.times do |c|
+      line = @size.times.map { |r| @grid[r][c] }.reverse
+      new_line, moved = slide_line(line)
+      new_line.reverse!
+      @size.times { |r| @grid[r][c] = new_line[r] }
+      @valid_move = true if moved
+    end
+  end
+
+  def left
+    @size.times do |r|
+      new_line, moved = slide_line(@grid[r].dup)
+      @grid[r] = new_line
+      @valid_move = true if moved
+    end
+  end
+
+  def right
+    @size.times do |r|
+      new_line, moved = slide_line(@grid[r].reverse)
+      @grid[r] = new_line.reverse
+      @valid_move = true if moved
+    end
+  end
+
+  def place_tile
+    return if full?
+
+    loop do
+      r, c = rand(@size), rand(@size)
+      next unless @grid[r][c].nil?
+
+      @grid[r][c] = rand < 0.3 ? 4 : 2
+      break
+    end
+  end
+
+  def display
+    width = column_width
+    separator = (" " + "-" * width) * @size
+    @grid.each do |row|
+      puts separator
+      puts "|" + row.map { |v| v.to_s.rjust(width) }.join("|") + "|"
+    end
+    puts separator
+  end
+
+  def column_width
+    @grid.flatten.compact.map { |v| v.to_s.length }.max || 1
+  end
+
+  private
+
+  def prompt_size
+    Integer(gets.chomp)
+  rescue ArgumentError
+    print "Please enter an integer: "
+    retry
+  end
+
+  # Slides all non-nil values in +line+ toward index 0, merging equal
+  # adjacent tiles once each. Returns [new_line, moved].
+  def slide_line(line)
+    tiles = line.compact
+    merged = []
+    i = 0
+    while i < tiles.size
+      if i + 1 < tiles.size && tiles[i] == tiles[i + 1]
+        merged << tiles[i] * 2
+        i += 2
+      else
+        merged << tiles[i]
+        i += 1
+      end
+    end
+    new_line = merged + Array.new(line.size - merged.size)
+    [new_line, new_line != line]
+  end
 end
 
-def game_over?
-    for r in 0...$l
-        for c in 0...$l
-            v = $grid[r][c]
-            if v == nil
-                return false
-            end
-            if r > 0 && v == $grid[r-1][c] \
-                || r < $l - 1 && v == $grid[r+1][c] \
-                || c > 0 && v == $grid[r][c-1] \
-                || c < $l - 1 && v == $grid[r][c+1]
-                return false
-            end
-        end
-    end
-    return true
-end
-
-play()
+Game2048.new.play if __FILE__ == $0
