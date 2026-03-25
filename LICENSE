@@ -1,0 +1,29 @@
+Copyright (c) 2026 Jane Seah
+
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0
+International License (CC BY-NC 4.0).
+
+You are free to:
+  - Share   — copy and redistribute the material in any medium or format
+  - Adapt   — remix, transform, and build upon the material
+
+Under the following terms:
+  - Attribution      — You must give appropriate credit, provide a link to the
+                       license, and indicate if changes were made.
+  - NonCommercial    — You may not use the material for commercial purposes.
+
+No additional restrictions — you may not apply legal terms or technological
+measures that legally restrict others from doing anything the license permits.
+
+Full license text: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+-------------------------------------------------------------------------------
+
+This project is an independent Ruby reimplementation inspired by the original
+2048 game created by Gabriele Cirulli:
+
+  https://github.com/gabrielecirulli/2048
+
+The original is copyright (c) 2014 Gabriele Cirulli and released under the
+MIT License. This project reuses no code or assets from the original; the
+tribute is one of inspiration and respect.
