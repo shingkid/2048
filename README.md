@@ -65,3 +65,14 @@ test_game.rb   # Minitest test suite (no TUI dependencies)
 Gemfile        # bubbletea, lipgloss, tty-prompt
 .ruby-version  # Pins Ruby version to 3.3.6
 ```
+
+```mermaid
+graph TD
+    main.rb -->|starts| GameTUI
+    GameTUI -->|owns| Game2048
+    GameTUI -->|renders via| lipgloss-ruby
+    GameTUI -->|event loop via| bubbletea-ruby
+    Game2048 -->|save/load| 2048_save.json
+    Game2048 -->|save/load| 2048_best.json
+    test_game.rb -->|tests| Game2048
+```
