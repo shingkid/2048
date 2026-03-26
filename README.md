@@ -2,6 +2,8 @@
 
 A terminal implementation of the [2048](https://en.wikipedia.org/wiki/2048_(video_game)) sliding tile puzzle, written in Ruby with a full-colour TUI powered by [bubbletea-ruby](https://github.com/marcoroth/bubbletea-ruby) and [lipgloss-ruby](https://github.com/marcoroth/lipgloss-ruby).
 
+![Screenshot](Screenshot.png)
+
 ## Requirements
 
 - Ruby 3.3.6 (see `.ruby-version`)
